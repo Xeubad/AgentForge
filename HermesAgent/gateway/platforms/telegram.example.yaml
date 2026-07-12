@@ -1,0 +1,64 @@
+# Telegram Gateway 配置示例
+# 复制为 ~/.hermes/gateway/platforms/telegram.yaml 后填实际值
+# 启用：hermes gateway start telegram
+
+platform: telegram
+enabled: false                              # 默认关闭；填好后改 true 再 reload
+
+# ---------- 接入凭据 ----------
+# 强约束：Bot Token 永远走 ~/.hermes/.env，不写在本文件
+credentials:
+  bot_token_env: "TELEGRAM_BOT_TOKEN"       # 在 .env 里：TELEGRAM_BOT_TOKEN=123:abc...
+  webhook_url: ""                            # 留空 = 长轮询模式（推荐）；填了走 webhook
+  webhook_secret_env: "TELEGRAM_WEBHOOK_SECRET"   # 若用 webhook 模式必填
+
+# ---------- 监听范围 ----------
+listening:
+  private_chats: true                        # 私聊（推荐）
+  groups: false                              # 群组默认关；要开必须显式
+  channels: false                            # 频道默认关
+  inline_queries: false                      # inline 模式默认关
+  callback_queries: true                     # inline keyboard 按钮回调（受 command allowlist 控制）
+
+  # 若开 groups: true，强烈建议加群白名单
+  allowed_group_chat_ids: []
+  # - -1001234567890
+
+# ---------- 消息处理 ----------
+message_handling:
+  trigger_mode: "explicit_mention"           # explicit_mention / direct_message / both
+  ignore_forwards: true                      # Forward 来的消息按低信任处理（默认忽略）
+  ignore_edits: true                         # 不响应已编辑过的消息（防注入翻新）
+  max_message_length: 4000
+  truncate_long_messages: true
+
+# ---------- Bot-to-Bot ----------
+allow_bot_to_bot: false                      # 默认禁
+allowed_bot_ids: []                          # 若开必须列出
+
+# ---------- 回执策略 ----------
+response:
+  delivery_mode: "reply_to_message"          # reply_to_message / new_message
+  format: "markdown_v2"                       # Telegram 推荐 markdown_v2
+  split_long_responses: true
+  max_response_length: 4000
+
+# ---------- 速率限制 ----------
+rate_limit:
+  per_user_per_minute: 5                     # 单个身份每分钟最多请求数
+  global_per_minute: 30                       # 全局每分钟总请求数
+  on_exceed: "silent_drop"                   # silent_drop / queue / reject_with_message
+
+# ---------- 日志与审计 ----------
+audit:
+  store_all_incoming: true                   # 入站消息全量存档（90 天）
+  store_path: "~/.hermes/sessions/telegram"
+  redact_in_index:                           # FTS5 索引时脱敏
+    - "phone"
+    - "email"
+    - "token_pattern"
+
+# ---------- 应急 ----------
+emergency:
+  pause_keyword: ""                          # 留空 = 不允许通过消息暂停；强烈建议留空
+  # 暂停只能在 CLI: hermes gateway pause telegram

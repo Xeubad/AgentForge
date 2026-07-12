@@ -1,0 +1,78 @@
+# 每日摘要任务模板
+# 路径：~/.openclaw/schedules/daily-digest.yaml
+# 用途：每天指定时间，整理今天发生过的事，生成一份摘要草稿
+# 注意：本任务只生成草稿，不发送给任何人；要发出去由用户人工触发
+
+name: daily-digest
+description: "每日整理 daily-log，生成可读摘要草稿"
+
+# ---------- 调度 ----------
+enabled: false                  # 默认关闭；用户在对话里说"启用每日摘要"才打开
+schedule:
+  type: cron
+  expression: "0 18 * * 1-5"   # 每周一到周五 18:00（本机时区）
+  timezone: "Asia/Shanghai"
+
+# ---------- 准入条件 ----------
+preconditions:
+  - "用户已经在对话中明确启用本条调度"
+  - "~/.openclaw/tasks/daily-log.md 存在且当天有内容"
+  - "Heartbeat 处于正常状态（连续失败 < 3）"
+
+# ---------- 执行 ----------
+runner:
+  persona: scribe              # 由 scribe 人格执行
+  skills:
+    - read_file
+    - tidy_logs
+    - write_to_outputs
+  steps:
+    - 读取 ~/.openclaw/tasks/daily-log.md 当天条目
+    - 读取 ~/.openclaw/tasks/in-flight.json 当前未完成项
+    - 读取 ~/.openclaw/memory/lessons.md 新增条目（如果今天有）
+    - 按模板生成摘要草稿
+    - 写入 ~/.openclaw/tasks/digests/YYYY-MM-DD.md
+    - 在 ~/.openclaw/tasks/daily-log.md 末尾添加一条 [digest-generated]
+
+# ---------- 输出策略 ----------
+output:
+  destination: "~/.openclaw/tasks/digests/{{ date }}.md"
+  format: markdown
+  template: |
+    # 每日摘要 — {{ date }}
+
+    ## 今日完成
+    {{ completed_tasks }}
+
+    ## 进行中（未验证）
+    {{ in_flight_tasks }}
+
+    ## 新经验
+    {{ new_lessons }}
+
+    ## 风险与待办
+    {{ risks_and_pending }}
+
+    ## 明日建议第一动作
+    {{ next_action }}
+
+# ---------- 红线 ----------
+forbidden:
+  - 把摘要直接发送到任何外部地址（邮件 / IM / Slack）
+  - 调用任何写远端的 Skill
+  - 修改 memory/lessons.md（草稿不直接落到长期记忆）
+  - 触发其他 Cron 任务
+
+# ---------- 失败策略 ----------
+on_failure:
+  retries: 0                   # 不重试
+  log_to: "~/.openclaw/tasks/daily-log.md"
+  notify_user: true            # 失败时主动告诉用户
+  pause_after_consecutive_failures: 3
+
+# ---------- 用户控制 ----------
+user_commands:
+  enable: "启用每日摘要"
+  disable: "暂停每日摘要"
+  run_now: "立刻生成今天摘要"
+  delete: "删除每日摘要任务"

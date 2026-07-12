@@ -1,0 +1,87 @@
+# Slack Gateway 配置示例
+# 复制为 ~/.hermes/gateway/platforms/slack.yaml 后填实际值
+# 启用：hermes gateway start slack
+
+platform: slack
+enabled: false
+
+# ---------- 接入凭据 ----------
+credentials:
+  app_token_env: "SLACK_APP_TOKEN"          # .env: SLACK_APP_TOKEN=xapp-...
+  bot_token_env: "SLACK_BOT_TOKEN"          # .env: SLACK_BOT_TOKEN=xoxb-...
+  signing_secret_env: "SLACK_SIGNING_SECRET"
+  # 推荐 Socket Mode（用 app_token），避免暴露 webhook 公网端点
+
+# ---------- 模式 ----------
+mode: "socket"                              # socket / events_api
+
+# ---------- 监听范围 ----------
+listening:
+  direct_messages: true                     # DM（私聊）— 视为更高信任来源
+  channels: false                           # 频道默认关；要开必须显式
+  threads: true                             # 允许在 thread 内继续对话
+
+  allowed_channels: []
+  # - channel_id: "C01ABCDEF"
+  #   channel_name: "#hermes-private"
+  #   listen_in_threads_only: false
+
+# ---------- 消息处理 ----------
+message_handling:
+  trigger_mode: "mention_or_dm"             # mention_or_dm / direct_message_only
+  respond_in_thread: true                   # channel 中触发的请求默认开 thread 回复
+  ignore_bot_messages: true                 # 默认不响应 Bot
+  ignore_edited_messages: true
+  max_message_length: 4000
+
+# ---------- 身份解析 ----------
+identity:
+  # Slack user_id 是 workspace 内唯一；DM 与 channel 同 user_id = 同身份
+  # 但 channel role（如 admin / member）不影响 Hermes 的角色判定，由 identity-allowlist 决定
+  workspace_scoped_permissions: true
+
+# ---------- Bot-to-Bot ----------
+allow_bot_to_bot: false
+allowed_bot_ids: []
+
+# ---------- 回执策略 ----------
+response:
+  use_blocks: true                          # 用 Slack Block Kit 结构化回执
+  use_threads_for_long: true                # 长回复在 thread 中分段
+  attach_files_for_large_outputs: true      # 大输出转为文件上传
+  max_response_length: 4000
+
+# ---------- Slash Commands ----------
+slash_commands:
+  enabled: true
+  registered_commands:                       # 必须在 command-allowlist.md 里登记
+    - /hermes-status
+    - /hermes-inbox
+    - /hermes-help
+    - /hermes-task
+    - /hermes-draft
+
+# ---------- Workflow / Shortcuts ----------
+workflows:
+  enabled: false                            # 默认关；启用前必须严格审查
+  allowed_workflow_ids: []
+
+# ---------- 速率限制 ----------
+rate_limit:
+  per_user_per_minute: 5
+  global_per_minute: 30
+  on_exceed: "silent_drop"
+
+# ---------- 日志 ----------
+audit:
+  store_all_incoming: true
+  store_path: "~/.hermes/sessions/slack"
+  redact_in_index:
+    - "phone"
+    - "email"
+    - "token_pattern"
+    - "internal_channel_ids"
+
+# ---------- 应急 ----------
+emergency:
+  pause_keyword: ""                          # 留空；暂停走 CLI

@@ -1,0 +1,48 @@
+{
+  "$schema_version": "1.0",
+  "description": "当前会话进行中的任务。同一时刻只允许一条 status=in_progress，多任务必须排队。",
+  "current": null,
+  "queue": [],
+  "completed_today": [],
+  "blocked": [],
+  "schema": {
+    "task": {
+      "id": "string，建议 YYYYMMDD-序号",
+      "title": "string，一行任务名",
+      "status": "pending | in_progress | blocked | done | abandoned",
+      "persona": "captain | diver | pincer | lighthouse | scribe | mender",
+      "started_at": "ISO8601 时间戳",
+      "contract": {
+        "goal": "本次目标",
+        "scope": "做什么",
+        "out_of_scope": "明确不做什么",
+        "acceptance": "什么证据算完成",
+        "risks": "最可能翻车的地方"
+      },
+      "progress": [
+        {
+          "ts": "ISO8601",
+          "persona": "执行人格",
+          "note": "动作描述",
+          "evidence": "命令 / 文件 / 输出 / commit id"
+        }
+      ],
+      "blockers": [
+        {
+          "since": "ISO8601",
+          "reason": "为什么卡住",
+          "needs": "需要谁 / 什么信息 / 什么前置"
+        }
+      ],
+      "next_step": "下一步具体动作"
+    }
+  },
+  "rules": [
+    "同一时刻最多一个 status=in_progress",
+    "切换任务必须先把当前任务转为 pending / blocked / done，明确状态",
+    "任何 progress 条目必须带 evidence；没证据等于没做",
+    "blocked 超过 3 天的任务，写进 daily-log 提示用户决策",
+    "done 的任务由 scribe 转写进 daily-log 后再从 current 移除",
+    "abandoned 的任务必须写明放弃理由，不允许静默删除"
+  ]
+}

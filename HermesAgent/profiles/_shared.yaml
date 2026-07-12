@@ -1,0 +1,147 @@
+# Hermes Profile 共享配置片段
+# 路径：~/.hermes/profiles/_shared.yaml
+# 作用：用 YAML anchor 让多个 profile 共享相同的配置块，避免在每个 profile 里重复写
+# 引用方式：在 profile 的 config.yaml 里用 `<<: *anchor-name`
+
+# ============================================================================
+# 沙箱与安全
+# ============================================================================
+_sandbox_strict: &sandbox_strict
+  enabled: true
+  network:
+    allow_outbound: false
+    allowed_domains: []
+  filesystem:
+    write_paths:
+      - "~/.hermes/outputs"
+      - "~/.hermes/tasks"
+    forbidden_paths:
+      - "~/.ssh"
+      - "~/.aws"
+      - "~/.config/gcloud"
+      - "~/.hermes/.env"
+      - "~/.hermes/auth.json"
+
+_sandbox_dev: &sandbox_dev
+  enabled: true
+  network:
+    allow_outbound: true
+    allowed_domains:
+      - "docs.python.org"
+      - "developer.mozilla.org"
+      - "*.github.com"
+      - "registry.npmjs.org"
+      - "pypi.org"
+  filesystem:
+    write_paths:
+      - "~/.hermes/outputs"
+      - "~/.hermes/tasks"
+      - "~/projects"
+    forbidden_paths:
+      - "~/.ssh"
+      - "~/.aws"
+      - "~/.config/gcloud"
+      - "~/.hermes/.env"
+      - "~/.hermes/auth.json"
+
+# ============================================================================
+# Skill 治理（所有 profile 共享同一套白名单 + 三阶段流转）
+# ============================================================================
+_skills_default: &skills_default
+  policy: "allowlist"
+  allowlist_file: "~/.hermes/shared/skills/allowlist.yaml"
+  on_unknown: "block_and_ask"
+  audit_on_install:
+    enabled: true
+    require_persona: "argus"
+    require_human_confirm: true
+  quarantine:
+    enabled: true
+    dir: "~/.hermes/skills/.quarantine"
+    max_age_days: 30
+  review:
+    enabled: true
+    dir: "~/.hermes/skills/.review"
+    max_age_days: 14
+  production:
+    dir_pattern: "~/.hermes/skills/{category}/{name}"
+    dormant_threshold_days: 180
+
+# ============================================================================
+# 安全护栏（所有 profile 共享同一套）
+# ============================================================================
+_guards_default: &guards_default
+  irreversible_actions: "~/.hermes/shared/guards/irreversible-actions.md"
+  prompt_injection: "~/.hermes/shared/guards/prompt-injection.md"
+  skill_quarantine: "~/.hermes/shared/guards/skill-quarantine.md"
+  memory_write_policy: "~/.hermes/shared/guards/memory-write-policy.md"
+  memory_backend_policy: "~/.hermes/shared/guards/memory-backend-policy.md"
+  gateway_security: "~/.hermes/shared/guards/gateway-security.md"
+  block_external_action_without_consent: true
+  redact_in_logs:
+    - "email"
+    - "phone"
+    - "api_key"
+    - "absolute_user_path"
+    - "machine_name"
+    - "token"
+    - "oauth_refresh"
+
+# ============================================================================
+# 记忆共享
+# ============================================================================
+# memory.provider 是可插拔点：
+#   - markdown（默认）—— MEMORY.md / USER.md / lessons.md 静态文件，零外部依赖
+#   - mem0           —— 云端 SaaS（也可自部署）
+#   - agentmemory    —— 本地 SQLite + MCP
+#   - hindsight      —— 本地 PostgreSQL + 知识图谱
+# 切换非默认 provider 前必读 shared/guards/memory-backend-policy.md
+# 三种外部 provider 不能同时挂，且切换属不可逆动作（详见 backend policy 第 6 节）
+_memory_shared: &memory_shared
+  provider: "markdown"
+  user_profile: "~/.hermes/USER.md"
+  agent_memory: "~/.hermes/MEMORY.md"
+  lessons: "~/.hermes/shared/memory/lessons.md"
+  skill_graveyard: "~/.hermes/shared/memory/skill-graveyard.md"
+  write_policy:
+    auto_write_on_user_correction: true
+    auto_write_on_repeated_failure: true
+    require_user_consent_for_personal_info: true
+    require_argus_audit_for_new_entries: true
+  # 接外部 provider 时启用以下字段，详见 memory-backend-policy.md
+  backend:
+    # retain / consolidation 必须用轻量模型
+    retain_llm: ""              # 例 "claude-haiku-4-5" / "gemini-flash-2"
+    consolidation_llm: ""       # 同上
+    # 守护进程端口写入文件，避免硬编码漂移
+    port_file: "~/.hermes/run/memory-provider.port"
+    # 健康检查失败时降级到只读 markdown
+    fallback_to_markdown_on_unhealthy: true
+    # weekly-audit 必输出后端运维快照
+    weekly_audit_emit_backend_snapshot: true
+
+# ============================================================================
+# 输出与汇报
+# ============================================================================
+_output_default: &output_default
+  language: "zh-CN"
+  style: "lead_with_conclusion"
+  max_proactive_messages_per_hour: 3
+  debrief_required: true
+  debrief_template:
+    - "做了什么"
+    - "没做什么"
+    - "验证证据"
+    - "剩余风险"
+    - "下一步建议"
+
+# ============================================================================
+# Cron 默认策略（每个 profile 引用后可单独覆写）
+# ============================================================================
+_cron_default: &cron_default
+  enabled: false                  # 全局默认关闭
+  require_user_consent: true
+  config_dir: "~/.hermes/shared/cron"
+  failure:
+    consecutive_failures_to_pause: 3
+    notify_user_on_pause: true

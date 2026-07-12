@@ -1,0 +1,88 @@
+# 每周 Skill 审计 Cron 模板（Hermes 独家任务）
+# 路径：~/.hermes/shared/cron/weekly-skill-audit.yaml
+# 用途：每周审计 Skill 三阶段流转，识别沉睡 Skill、过期 quarantine、未提升 review
+# 这是 Hermes 区别于其他 AI Agent 的关键运维任务——Skill 自创能力越强，越需要定期审计
+
+name: weekly-skill-audit
+description: "每周审计 Skill 三阶段流转，清理 quarantine 沉睡条目，识别可疑提升请求"
+
+enabled: false                    # 默认关闭；强烈建议启用
+schedule:
+  type: cron
+  expression: "0 10 * * 5"        # 每周五 10:00
+  timezone: "Asia/Shanghai"
+  applies_to_profiles: ["*"]      # 跨所有 profile 审计
+
+preconditions:
+  - "用户已在 CLI 明确启用本条调度"
+  - "~/.hermes/skills/ 目录存在"
+  - "~/.hermes/skills/.hub/audit.log 存在"
+
+runner:
+  persona: argus                  # 由 Argus 主理审计
+  collaborator: atlas             # Atlas 协助清理与归档
+  skills:
+    - read_file
+    - grep_in_repo
+    - write_to_outputs
+  steps:
+    - "Argus 扫描 ~/.hermes/skills/.quarantine/ — 列出每个 Skill 的"
+    - "  - 创建时间 / 创建源任务 / 创建 SOUL"
+    - "  - 距今天数（30 天阈值）"
+    - "  - 是否曾被 dry-run / 是否曾被读取审查"
+    - "Argus 扫描 ~/.hermes/skills/.review/ — 列出"
+    - "  - 进入审查区时间 / 距今天数（14 天阈值）"
+    - "  - dry-run 历史"
+    - "  - 待提升 vs 待退回"
+    - "Argus 扫描 ~/.hermes/skills/<category>/* 产线 — 列出"
+    - "  - 上次调用时间 / 调用频次"
+    - "  - 半年未调用的 → 标'沉睡'"
+    - "Argus 扫描 audit.log — 识别异常模式（短时间内大量 Skill 自创、可疑命名等）"
+    - "Atlas 整理事实，生成审计报告草稿"
+    - "草稿写入 ~/.hermes/tasks/skill-audits/YYYY-WW.md"
+    - "在 daily-log 添加一条 [skill-audit-generated]"
+
+output:
+  destination: "~/.hermes/tasks/skill-audits/{{ year }}-W{{ iso_week }}.md"
+  format: markdown
+  template: |
+    # Skill 审计报告 — {{ year }} 第 {{ iso_week }} 周
+
+    ## Quarantine 沉睡（≥ 30 天）
+    {{ quarantine_stale }}        # 建议丢弃，由用户确认后 Atlas 归档 graveyard
+
+    ## Review 滞留（≥ 14 天）
+    {{ review_stale }}            # 建议退回 quarantine 或丢弃
+
+    ## 产线沉睡（≥ 180 天未调用）
+    {{ production_dormant }}      # 建议从 allowlist 移除
+
+    ## 异常信号
+    {{ anomalies }}               # 如短时间内大量自创、命名可疑、副作用声明前后不一致
+
+    ## 推荐动作（仅供决策，不会自动执行）
+    {{ suggestions }}
+
+    ## 本周 Skill 流转统计
+    - 新建 quarantine：N 条
+    - 提升 review：N 条
+    - 提升产线：N 条
+    - 拉黑归档：N 条
+
+forbidden:
+  - "自动删除 quarantine / review 中任何 Skill（必须用户确认）"
+  - "自动从 allowlist 移除条目（必须用户确认）"
+  - "自动修改 audit.log"
+  - "把审计内容发到任何 Gateway"
+
+on_failure:
+  retries: 0
+  log_to: "~/.hermes/tasks/daily-log.md"
+  notify_user: true
+  pause_after_consecutive_failures: 3
+
+user_commands:
+  enable: "hermes cron enable weekly-skill-audit"
+  disable: "hermes cron disable weekly-skill-audit"
+  run_now: "hermes cron run-now weekly-skill-audit"
+  delete: "hermes cron delete weekly-skill-audit"

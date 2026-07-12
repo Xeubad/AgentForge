@@ -1,0 +1,46 @@
+{
+  "features": [
+    {
+      "id": "codex-config-migration",
+      "priority": 1,
+      "area": "codex-config",
+      "title": "Migrate copied Claude Code prompt content into Codex configuration",
+      "user_visible_behavior": "Codex has a clean AGENTS.md entrypoint, project .codex/config.toml, custom agent TOML files, and a global Codex template without old Claude migration files.",
+      "status": "passing",
+      "verification": [
+        "Confirm AGENTS.md is rewritten as the Codex project entrypoint.",
+        "Confirm GLOBAL-AGENTS.md exists as the ~/.codex/AGENTS.md template.",
+        "Confirm .codex/config.toml parses as TOML and uses documented Codex keys.",
+        "Confirm .codex/agents/*.toml parse as TOML and define name, description, developer_instructions.",
+        "Confirm legacy CLAUDE files and old Claude directories are removed."
+      ],
+      "evidence": [
+        "Python tomllib parsed CodeX/.codex/config.toml successfully.",
+        "Python tomllib parsed all CodeX/.codex/agents/*.toml files and confirmed each defines name, description, and developer_instructions.",
+        "Python json parsed CodeX/tasks/feature-list.json successfully.",
+        "rg confirmed Codex entrypoint, global template, and .codex references exist.",
+        "Old Claude migration files were removed from CodeX: CLAUDE.md, GLOBAL-CLAUDE.md, README.md, .claude/, agents/, tasks/todo.md, and tasks/lessons.md."
+      ],
+      "notes": "Migration and cleanup are scoped to the CodeX/ copy. Root Claude Code configuration is intentionally left unchanged."
+    },
+    {
+      "id": "codex-readme-guide",
+      "priority": 2,
+      "area": "codex-docs",
+      "title": "Create Codex high-efficiency configuration guide",
+      "user_visible_behavior": "CodeX includes a README that explains installation, file responsibilities, agent usage, and the minimal high-efficiency workflow.",
+      "status": "passing",
+      "verification": [
+        "Confirm CodeX/README.md exists.",
+        "Confirm README explains AGENTS.md, GLOBAL-AGENTS.md, .codex/config.toml, .codex/agents, tasks, and memory.",
+        "Confirm TOML and JSON configuration files still parse after adding README."
+      ],
+      "evidence": [
+        "CodeX/README.md was created.",
+        "README includes structure, install steps, agent table, workflow, file maintenance rules, and minimal setup.",
+        "Python tomllib/json validation passed after README creation."
+      ],
+      "notes": "README is human-facing; active Codex behavior remains in AGENTS.md and .codex/."
+    }
+  ]
+}

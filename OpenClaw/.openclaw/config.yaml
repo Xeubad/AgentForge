@@ -1,0 +1,156 @@
+# OpenClaw 全局配置
+# 路径：~/.openclaw/config.yaml
+# 作用：定义 OpenClaw 跨任务通用的运行参数、默认人格、Skill 加载策略、调度行为
+# 注意：所有需要"破窗执行"的高危选项默认关闭，必须显式开启
+# 部署形态：OpenClaw 只有全局部署，不存在项目级配置——任何项目的任务都共享这一份
+
+profile:
+  user: "your-name"                # 用户名，用于在 daily-log 中标识发起人
+  language: "zh-CN"
+  timezone: "Asia/Shanghai"
+  description: "数字员工的全局画像。具体任务上下文请走 ~/.openclaw/tasks/ 与 memory/user-profile.md。"
+
+# ---------- 默认人格与路由 ----------
+agents:
+  default: "captain"
+  routes:
+    # 任务类型 → 默认切换的人格
+    research: "diver"               # 调研、读源码、查文档
+    execute: "pincer"               # 执行型任务、批量处理
+    review: "lighthouse"            # 审查、安全审计、Skill 准入
+    fix: "mender"                   # 修复、排障、回滚
+    report: "scribe"                # 写总结、写日志、整理交接
+  load_from:
+    - "~/.openclaw/agents"          # 全局人格目录（唯一来源）
+
+# ---------- Skill 治理 ----------
+skills:
+  policy: "allowlist"               # allowlist / blocklist / open；强烈建议保持 allowlist
+  allowlist_file: "~/.openclaw/skills/allowlist.yaml"
+  on_unknown: "block_and_ask"       # 遇到未授权 Skill：block_and_ask / silent_block / allow
+  audit_on_install:
+    enabled: true
+    require_persona: "lighthouse"
+    require_human_confirm: true
+  network:
+    allow_outbound: false           # 默认禁止 Skill 主动发起外部网络请求
+    domain_allowlist: []            # 例如：["docs.python.org", "*.github.com"]
+  filesystem:
+    write_paths:
+      - "~/.openclaw/outputs"       # Skill 默认写入区
+      - "~/.openclaw/tasks"
+      - "~/.openclaw/memory"
+    forbidden_paths:
+      - "~/.ssh"
+      - "~/.aws"
+      - "~/.config"
+      - "/etc"
+    task_workdir_policy:            # 任务需要在某个具体仓库内操作时
+      require_user_consent: true    # 每次进入新工作目录必须用户在对话里点头
+      remember_in_session: true     # 同一会话内不再反复问
+
+# ---------- 调度（Heartbeat + Cron）----------
+schedule:
+  heartbeat:
+    enabled: true
+    interval_seconds: 30
+    allowed_actions:
+      - "read_state"
+      - "tidy_logs"
+      - "surface_pending"
+    forbidden_actions:
+      - "send_message"
+      - "git_commit_push"
+      - "external_api_call_paid"
+      - "install_skill"
+  cron:
+    enabled: false                  # 默认关闭；用户明确开启某条 Cron 时再打开
+    require_user_consent: true
+    config_dir: "~/.openclaw/schedules"
+  failure:
+    consecutive_failures_to_pause: 3
+    notify_user_on_pause: true
+
+# ---------- 记忆（全局唯一）----------
+memory:
+  enabled: true
+  paths:
+    lessons: "~/.openclaw/memory/lessons.md"
+    user_profile: "~/.openclaw/memory/user-profile.md"
+    skill_graveyard: "~/.openclaw/memory/skill-graveyard.md"
+  write_policy:
+    auto_write_on_user_correction: true
+    auto_write_on_repeated_failure: true
+    require_user_consent_for_personal_info: true
+
+# ---------- 任务运行态（全局唯一）----------
+tasks:
+  inbox: "~/.openclaw/tasks/inbox.md"
+  in_flight: "~/.openclaw/tasks/in-flight.json"
+  daily_log: "~/.openclaw/tasks/daily-log.md"
+  handoff: "~/.openclaw/tasks/handoff.md"
+  single_in_flight: true            # 同一时刻最多一个进行中的主任务
+  per_workdir_subdir: true          # 任务条目按工作目录加 tag，便于多仓库串行
+
+# ---------- 安全护栏 ----------
+guards:
+  irreversible_actions: "~/.openclaw/guards/irreversible-actions.md"
+  prompt_injection: "~/.openclaw/guards/prompt-injection.md"
+  block_external_action_without_consent: true
+  redact_in_logs:
+    - "email"
+    - "phone"
+    - "api_key"
+    - "absolute_user_path"
+    - "machine_name"
+
+# ---------- 输出与汇报 ----------
+output:
+  language: "zh-CN"
+  style: "lead_with_conclusion"
+  max_proactive_messages_per_hour: 3   # Heartbeat 主动推送上限
+  debrief_required: true
+  debrief_template:
+    - "做了什么"
+    - "没做什么"
+    - "验证证据"
+    - "剩余风险"
+    - "下一步建议"
+
+# ---------- Agent Team（多人格协作）----------
+team:
+  enabled: false                    # 默认关闭，避免误触发协作消耗
+  max_concurrent_agents: 3
+  coordinator: "captain"
+  reporting_channel: "~/.openclaw/tasks/daily-log.md"
+
+# ---------- 运行时硬化（多渠道部署强烈建议）----------
+# 这一段是 ~/.openclaw/openclaw.json 里需要落的字段；
+# 这里只是提醒清单，实际值由部署者用 `openclaw config set` 落到 openclaw.json。
+# 历史教训见 memory/lessons.md 2026-06-30 系列条目。
+runtime_hardening:
+  # 1) 每个 model provider 必须配 timeout，否则一次 ECONNRESET 拖死整个 Gateway。
+  #    openclaw config set models.providers.<name>.timeoutSeconds 60
+  provider_timeout_seconds_recommended: 60
+
+  # 2) 收紧 stuck session 阈值，IM 渠道下不要等几小时才 abort。
+  #    openclaw config set diagnostics.stuckSessionWarnMs 120000
+  #    openclaw config set diagnostics.stuckSessionAbortMs 180000
+  stuck_session_warn_ms_recommended: 120000
+  stuck_session_abort_ms_recommended: 180000
+
+  # 3) 安全标志关闭，除非正在调试。
+  #    openclaw config set gateway.controlUi.allowInsecureAuth false
+  control_ui_allow_insecure_auth: false
+
+  # 4) 设置命令所有者（owner），否则 /diagnostics、/config 等不可用。
+  #    openclaw config set commands.ownerAllowFrom '["<channel>:<userid>"]'
+  command_owner_required: true
+
+  # 5) 装新插件后必须重跑 doctor，修掉 message tool / 路由相关警告。
+  #    openclaw doctor
+  doctor_after_plugin_install: true
+
+  # 6) 插件版本必须 pin，不要长期 @latest。
+  #    装完跑 `openclaw plugins list` 拿到版本号，写回 plugins.entries.<id>.spec
+  pin_plugin_versions: true

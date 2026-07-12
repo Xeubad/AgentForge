@@ -1,0 +1,91 @@
+# Hermes Profile - coder
+# 路径：~/.hermes/profiles/coder/config.yaml
+# 用途：编码场景。绑 IDE 类工作流，开放本地 dev 网络，默认 SOUL 是 daedalus
+# 启用：hermes profile use coder
+
+profile:
+  name: "coder"
+  description: "工程师工作场景：写代码、跑测试、本地调试、自创 Skill"
+  language: "zh-CN"
+  timezone: "Asia/Shanghai"
+
+# ---------- 模型 ----------
+model:
+  provider: custom
+  base_url: "https://openrouter.ai/api/v1"
+  api_key_env: "OPENROUTER_API_KEY"        # 在 ~/.hermes/.env 里设置
+  model_name: "anthropic/claude-3.5-sonnet"
+  max_tokens: 8192
+  temperature: 0.4                          # 编码场景调低，要稳
+
+# ---------- 默认 SOUL ----------
+# 注意：每个 profile 自己的 SOUL.md 指向 shared/souls/ 里的一个文件
+# 这里只声明默认是哪个 SOUL，切换由用户在对话里说"切到 X"或改 SOUL.md
+soul:
+  default: "daedalus"
+  default_file: "~/.hermes/shared/souls/daedalus.md"
+  fallback: "hermes"                        # daedalus 不胜任时回到 hermes
+  available:
+    - hermes
+    - sphinx
+    - daedalus
+    - argus
+    - atlas
+    # 注：iris 在 coder profile 里很少用，但仍可显式切换
+
+# ---------- 终端 ----------
+terminal:
+  backend: local
+  cwd: "."
+  timeout: 180
+  shell_snapshot: true                      # 加快重复命令
+
+# ---------- 沙箱与安全 ----------
+sandbox:
+  <<: *sandbox_dev                          # 引用 _shared.yaml 里的 _sandbox_dev anchor
+
+# ---------- Skill 治理 ----------
+skills:
+  <<: *skills_default
+
+# ---------- 安全护栏 ----------
+guards:
+  <<: *guards_default
+
+# ---------- 记忆 ----------
+memory:
+  <<: *memory_shared
+
+# ---------- 输出 ----------
+output:
+  <<: *output_default
+
+# ---------- Cron ----------
+cron:
+  <<: *cron_default
+  enabled_tasks:                            # 仅在 coder profile 启用这些
+    - daily-digest                          # 但默认 enabled=false，需 hermes cron enable
+    - weekly-skill-audit
+
+# ---------- Gateway ----------
+gateway:
+  enabled: false                            # coder profile 默认不开 Gateway（专注本地）
+  # 如开启，从 gateway/ 加载身份白名单和命令白名单
+  identity_allowlist: "~/.hermes/gateway/identity-allowlist.yaml"
+  command_allowlist: "~/.hermes/gateway/command-allowlist.md"
+
+# ---------- MCP ----------
+mcp_servers:
+  # 编码场景下推荐的 MCP server 示例（默认不连接，需用户 hermes mcp add 后启用）
+  # github:
+  #   command: npx
+  #   args: ["-y", "@modelcontextprotocol/server-github"]
+  #   env:
+  #     GITHUB_PERSONAL_ACCESS_TOKEN_ENV: "GITHUB_TOKEN"
+
+# ---------- Agent Team（多 SOUL 协作）----------
+team:
+  enabled: true                             # coder 场景下经常多 SOUL 协作
+  max_concurrent_souls: 3
+  coordinator: "hermes"
+  reporting_channel: "~/.hermes/tasks/daily-log.md"

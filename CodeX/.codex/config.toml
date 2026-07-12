@@ -1,0 +1,31 @@
+# Project-scoped Codex configuration.
+# Codex loads this file only when the project is trusted.
+
+model = "gpt-5.5"
+model_reasoning_effort = "medium"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+personality = "pragmatic"
+
+developer_instructions = """
+Use AGENTS.md as the project source of truth. Keep responses concise and evidence-based. Prefer minimal, verified changes over broad rewrites. Do not treat legacy CLAUDE.md files as active Codex instructions unless the user explicitly asks to migrate or compare them.
+"""
+
+# Feature flags
+# 字段已与 Codex CLI 0.129+ 对齐：codex_hooks 已被官方改名为 hooks（旧名 deprecated）
+# 其余字段均为 [features] 表内的合法 flag
+[features]
+memories = true
+hooks = true
+multi_agent = true
+personality = true
+shell_snapshot = true
+
+# Subagent 调度参数
+# 注意：[agents] 段在官方 config-reference 中未单独列出，但实际可用且
+# 与 [features].multi_agent 配合控制最大并发 subagent 线程数与递归深度。
+# 如启动时提示 "unknown table"，请删除整段。
+[agents]
+max_threads = 6
+max_depth = 1

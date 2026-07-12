@@ -1,0 +1,89 @@
+# 每日摘要 Cron 模板
+# 路径：~/.hermes/shared/cron/daily-digest.yaml
+# 用途：每天指定时间整理今天发生过的事，生成摘要草稿
+# 强约束：本任务只生成草稿，不发送给任何 Gateway，发送需用户人工触发
+
+name: daily-digest
+description: "每日整理 daily-log + MEMORY 新增 + Skill 流转情况，生成摘要草稿"
+
+# ---------- 调度 ----------
+enabled: false                    # 默认关闭；用户在 CLI 明确说"启用每日摘要"才打开
+schedule:
+  type: cron
+  expression: "0 18 * * 1-5"      # 每周一到周五 18:00
+  timezone: "Asia/Shanghai"
+  applies_to_profiles:            # 在哪些 profile 下执行
+    - coder
+    - writer
+    - ops
+
+# ---------- 准入条件 ----------
+preconditions:
+  - "用户已在 CLI 主控对话明确启用本条调度"
+  - "~/.hermes/tasks/daily-log.md 当天有内容"
+  - "Argus 已审过本条调度的内容范围"
+
+# ---------- 执行 ----------
+runner:
+  persona: atlas                  # 由 Atlas 整理 + Iris 起草
+  collaborator: iris
+  skills:
+    - read_file
+    - grep_in_repo
+    - write_to_outputs
+  steps:
+    - "Atlas 读取当天 ~/.hermes/tasks/daily-log.md"
+    - "Atlas 读取当天 ~/.hermes/tasks/in-flight.json 未完成项"
+    - "Atlas 检查当天新增 MEMORY 条目"
+    - "Atlas 检查当天 Skill 流转情况（quarantine/review/production 变更）"
+    - "Atlas 整理事实清单，交给 Iris"
+    - "Iris 按模板生成摘要草稿"
+    - "草稿写入 ~/.hermes/tasks/digests/YYYY-MM-DD.md"
+    - "在 daily-log 末尾添加一条 [digest-generated]"
+
+# ---------- 输出策略 ----------
+output:
+  destination: "~/.hermes/tasks/digests/{{ date }}.md"
+  format: markdown
+  template: |
+    # 每日摘要 — {{ date }}
+
+    ## 今日完成
+    {{ completed_tasks }}
+
+    ## 进行中（未验证）
+    {{ in_flight_tasks }}
+
+    ## 今日 Skill 流转
+    {{ skill_movement }}    # 新增 quarantine / 提升 review / promote 产线 / 拉黑
+
+    ## 今日 MEMORY 新增
+    {{ memory_additions }}
+
+    ## 风险与待办
+    {{ risks_and_pending }}
+
+    ## 明日建议第一动作
+    {{ next_action }}
+
+# ---------- 红线 ----------
+forbidden:
+  - "把摘要直接发送到任何 Gateway（Telegram / Slack / 邮件等）"
+  - "调用任何外部写工具"
+  - "修改 MEMORY.md（草稿不直接落到长期记忆）"
+  - "触发其他 Cron 任务"
+  - "在不同 Profile 之间串数据"
+
+# ---------- 失败策略 ----------
+on_failure:
+  retries: 0                      # 不重试
+  log_to: "~/.hermes/tasks/daily-log.md"
+  notify_user: true               # 失败时主动告诉用户
+  pause_after_consecutive_failures: 3
+
+# ---------- 用户控制 ----------
+user_commands:
+  enable: "hermes cron enable daily-digest"
+  disable: "hermes cron disable daily-digest"
+  run_now: "hermes cron run-now daily-digest"
+  delete: "hermes cron delete daily-digest"

@@ -1,0 +1,159 @@
+# 产线 Skill 白名单
+# 路径：~/.hermes/shared/skills/allowlist.yaml
+# 作用：所有"被 Agent 自动可调"的 Skill 必须在此登记
+# 强约束：任何不在此处的 Skill 调用一律 block_and_ask
+# 自创 Skill 的流转：.quarantine/ → .review/ → 产线分类目录 + 登记到此文件
+
+policy:
+  default: "block_and_ask"
+  on_unknown: "block_and_ask"     # 遇到未登记 Skill：block_and_ask / silent_block / allow
+  trust_chain:
+    - bundled                     # Hermes 官方捆绑
+    - signed_verified             # 有签名且签名验证通过
+    - user_authored_reviewed      # 用户自写 + Argus 审过 + dry-run 过
+    - agent_authored_reviewed     # Agent 自创 + Argus 审过 + dry-run 过
+  audit_required_for:
+    - "agent_authored_*"
+    - "user_authored_*"
+
+# 提升规则：从 .review/ 提到产线必须满足
+promotion_rules:
+  - argus_audit: passed
+  - dry_run: at_least_once
+  - user_explicit_consent_in_cli: required
+  - entry_in_this_allowlist: required
+  - source_audit_log: present
+
+# ---------- 内置低风险 Skill ----------
+skills:
+
+  - name: read_file
+    source: bundled
+    version: ">=1.0.0"
+    permissions: [filesystem.read]
+    network: false
+    audited_by: argus
+    audited_at: "2026-05-19"
+    notes: "只读文件，零外部副作用"
+
+  - name: grep_in_repo
+    source: bundled
+    version: ">=1.0.0"
+    permissions: [filesystem.read]
+    network: false
+    audited_by: argus
+    audited_at: "2026-05-19"
+    notes: "仓库搜索"
+
+  - name: web_fetch_readonly
+    source: bundled
+    version: ">=1.0.0"
+    permissions: [network.outbound]
+    network: true
+    allowed_domains:
+      - "docs.python.org"
+      - "developer.mozilla.org"
+      - "*.github.com"
+    require_user_confirm: true
+    audited_by: argus
+    audited_at: "2026-05-19"
+    notes: "只读网页抓取；禁止登录后内容"
+
+  - name: write_to_outputs
+    source: bundled
+    version: ">=1.0.0"
+    permissions: [filesystem.write]
+    network: false
+    write_paths:
+      - "~/.hermes/outputs"
+      - "~/.hermes/tasks"
+    audited_by: argus
+    audited_at: "2026-05-19"
+    notes: "限定写入目录"
+
+  - name: run_tests
+    source: bundled
+    version: ">=1.0.0"
+    permissions: [shell.run, filesystem.read]
+    network: false
+    audited_by: argus
+    audited_at: "2026-05-19"
+    notes: "运行测试，仅限当前工作目录"
+
+  - name: git_local
+    source: bundled
+    version: ">=1.0.0"
+    permissions: [shell.run, filesystem.read, filesystem.write]
+    network: false
+    audited_by: argus
+    audited_at: "2026-05-19"
+    notes: "本地 git；禁止 push / fetch / pull"
+
+# ---------- 中风险（需用户每次确认）----------
+
+  - name: gateway_send_draft
+    source: bundled
+    version: ">=1.0.0"
+    permissions: [filesystem.write]
+    network: false
+    audited_by: argus
+    audited_at: "2026-05-19"
+    notes: "Iris 起草 Gateway 回执，写入 tasks/drafts/，不真实发送"
+
+  - name: tavily_search
+    source: bundled
+    version: ">=1.0.0"
+    permissions: [network.outbound]
+    network: true
+    allowed_domains: ["api.tavily.com"]
+    require_user_confirm: true
+    audited_by: argus
+    audited_at: "2026-05-19"
+    notes: "搜索 API；用量收费，每次需确认"
+
+# ---------- 高风险（默认关闭，留模板）----------
+
+# - name: gateway_send_telegram
+#   source: bundled
+#   version: ">=1.0.0"
+#   permissions: [network.outbound]
+#   network: true
+#   require_user_confirm: true
+#   require_persona: argus
+#   irreversible: true
+#   notes: "真实发送 Telegram 消息；走 Iris→Argus→Daedalus 四步流"
+#
+# - name: git_push_remote
+#   source: bundled
+#   version: ">=1.0.0"
+#   permissions: [network.outbound, shell.run]
+#   network: true
+#   allowed_domains: ["github.com", "gitlab.com"]
+#   require_user_confirm: true
+#   require_persona: argus
+#   irreversible: true
+#   notes: "上传代码到远端，每次必须 Argus 审过 + 用户当场确认"
+
+# ---------- 黑名单（无论如何不允许）----------
+denylist:
+  - pattern: "*remote_shell*"
+    reason: "远程 shell 类一律拒"
+  - pattern: "*credential_dumper*"
+    reason: "凭据导出类一律拒"
+  - pattern: "*keylogger*"
+    reason: "键盘记录类一律拒"
+  - pattern: "*self_modifying*"
+    reason: "自我修改类一律拒"
+  - source: "agent_authored_unreviewed"
+    reason: "Agent 自创且未通过 .review 阶段的 Skill 一律拒"
+
+# ---------- 自创 Skill 跟踪 ----------
+# 自动维护：Daedalus 每次写新 Skill 时 append 一条
+# Atlas 周复盘时清理过期未提升的条目
+authored_skills_journal:
+  # - name: example-self-authored
+  #   created_at: "2026-05-19T10:30:00+08:00"
+  #   created_by_soul: daedalus
+  #   profile: coder
+  #   stage: quarantine | review | production | graveyard
+  #   audit_log_ref: ~/.hermes/skills/.hub/audit.log:line-NN

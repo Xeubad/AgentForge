@@ -1,0 +1,80 @@
+# 每周复盘任务模板
+# 路径：~/.openclaw/schedules/weekly-review.yaml
+# 用途：每周整理一次 OpenClaw 整体运行情况，识别哪些规则没在起作用、哪些 Skill 没用、哪些经验该归档
+# 注意：复盘是给用户决策用的输入；Agent 不替用户做"调整规则"的决定
+
+name: weekly-review
+description: "每周复盘 OpenClaw 整体运行情况（跨所有工作目录），并输出改进建议草稿"
+
+enabled: false
+schedule:
+  type: cron
+  expression: "0 10 * * 5"     # 每周五 10:00
+  timezone: "Asia/Shanghai"
+
+preconditions:
+  - "用户已经显式启用本条调度"
+  - "本周 ~/.openclaw/tasks/daily-log.md 至少有 1 条记录"
+
+runner:
+  persona: scribe
+  skills:
+    - read_file
+    - grep_in_repo
+    - tidy_logs
+    - write_to_outputs
+  steps:
+    - 读取本周 ~/.openclaw/tasks/daily-log.md
+    - 读取本周 ~/.openclaw/memory/lessons.md 新增条目
+    - 读取本周 ~/.openclaw/memory/skill-graveyard.md 新增条目
+    - 统计：完成任务数 / 失败任务数 / 用户纠正次数 / 主动汇报次数
+    - 识别可疑信号：同一类失败反复出现、某条规则从没起作用、某个 Skill 一直没用过
+    - 生成复盘草稿
+    - 写入 ~/.openclaw/tasks/reviews/YYYY-WW.md
+
+output:
+  destination: "~/.openclaw/tasks/reviews/{{ year }}-W{{ iso_week }}.md"
+  format: markdown
+  template: |
+    # 周复盘 — {{ year }} 第 {{ iso_week }} 周
+
+    ## 本周事实
+    完成任务：{{ completed_count }}
+    失败任务：{{ failed_count }}
+    用户纠正：{{ user_corrections_count }}
+    主动汇报：{{ proactive_messages_count }}
+    新增 lessons：{{ new_lessons_count }}
+    新增 skill-graveyard：{{ new_graveyard_count }}
+
+    ## 高频问题
+    {{ recurring_issues }}
+
+    ## 沉睡 Skill（本周一次都没调用）
+    {{ unused_skills }}
+
+    ## 沉睡规则（看起来没起作用）
+    {{ unused_rules }}
+
+    ## 给用户的建议（仅供决策，不会自动执行）
+    {{ suggestions }}
+
+    ## 下周建议关注点
+    {{ next_week_focus }}
+
+forbidden:
+  - 自动修改 ~/.openclaw/ 下任何配置文件（CLAW.md、agents/*、guards/*、allowlist 等）
+  - 自动调整 Skill allowlist
+  - 自动启停其他 Cron 任务
+  - 把复盘内容直接外发
+
+on_failure:
+  retries: 0
+  log_to: "~/.openclaw/tasks/daily-log.md"
+  notify_user: true
+  pause_after_consecutive_failures: 3
+
+user_commands:
+  enable: "启用每周复盘"
+  disable: "暂停每周复盘"
+  run_now: "立刻生成本周复盘"
+  delete: "删除每周复盘任务"

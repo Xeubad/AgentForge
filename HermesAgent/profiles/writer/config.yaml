@@ -1,0 +1,90 @@
+# Hermes Profile - writer
+# 路径：~/.hermes/profiles/writer/config.yaml
+# 用途：写作场景。撰稿、整理、翻译、对外回执，默认 SOUL 是 iris
+# 启用：hermes profile use writer
+
+profile:
+  name: "writer"
+  description: "写作场景：撰稿、整理、翻译、Gateway 回执、多平台发布草稿"
+  language: "zh-CN"
+  timezone: "Asia/Shanghai"
+
+# ---------- 模型 ----------
+model:
+  provider: custom
+  base_url: "https://openrouter.ai/api/v1"
+  api_key_env: "OPENROUTER_API_KEY"
+  model_name: "anthropic/claude-3.5-sonnet"
+  max_tokens: 8192
+  temperature: 0.7                          # 写作场景温度高一点
+
+# ---------- 默认 SOUL ----------
+soul:
+  default: "iris"
+  default_file: "~/.hermes/shared/souls/iris.md"
+  fallback: "hermes"
+  available:
+    - hermes
+    - sphinx
+    - iris
+    - argus
+    - atlas
+    # 注：daedalus 在 writer profile 里很少用（除非要写发布脚本类 Skill）
+
+# ---------- 终端 ----------
+terminal:
+  backend: local
+  cwd: "."
+  timeout: 60
+  shell_snapshot: true
+
+# ---------- 沙箱与安全 ----------
+sandbox:
+  <<: *sandbox_strict                       # 写作场景用更严的沙箱（不需要执行环境）
+
+# ---------- Skill 治理 ----------
+skills:
+  <<: *skills_default
+
+# ---------- 安全护栏 ----------
+guards:
+  <<: *guards_default
+
+# ---------- 记忆 ----------
+memory:
+  <<: *memory_shared
+
+# ---------- 输出 ----------
+output:
+  <<: *output_default
+  style: "narrative_first"                  # 写作场景覆写：先叙事后结论
+
+# ---------- Cron ----------
+cron:
+  <<: *cron_default
+  enabled_tasks:
+    - daily-digest                          # 写作场景常用每日摘要
+
+# ---------- Gateway ----------
+gateway:
+  enabled: true                             # 写作场景默认开（撰稿要发布）
+  identity_allowlist: "~/.hermes/gateway/identity-allowlist.yaml"
+  command_allowlist: "~/.hermes/gateway/command-allowlist.md"
+  default_response_platform: ""             # 留空 = 用户每次指定；可填 "telegram" 等
+  allow_bot_to_bot: false
+
+# ---------- MCP ----------
+mcp_servers:
+  # 写作场景推荐的 MCP server 示例
+  # tavily_search:
+  #   command: npx
+  #   args: ["-y", "@tavily/mcp-server"]
+  #   env:
+  #     TAVILY_API_KEY_ENV: "TAVILY_API_KEY"
+
+# ---------- Agent Team ----------
+team:
+  enabled: true
+  max_concurrent_souls: 2                   # 写作通常 iris + sphinx 配对
+  coordinator: "hermes"
+  reporting_channel: "~/.hermes/tasks/daily-log.md"

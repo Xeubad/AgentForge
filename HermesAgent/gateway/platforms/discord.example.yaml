@@ -1,0 +1,82 @@
+# Discord Gateway 配置示例
+# 复制为 ~/.hermes/gateway/platforms/discord.yaml 后填实际值
+# 启用：hermes gateway start discord
+
+platform: discord
+enabled: false
+
+# ---------- 接入凭据 ----------
+credentials:
+  bot_token_env: "DISCORD_BOT_TOKEN"        # .env: DISCORD_BOT_TOKEN=...
+  application_id: ""                        # Discord 应用 ID
+  public_key: ""                            # 验证 webhook 用，公开值，可放本文件
+
+# ---------- 监听范围 ----------
+listening:
+  direct_messages: true                     # 私聊（推荐）
+  guild_channels: false                     # 服务器频道默认关；要开必须显式
+  threads: false                            # 默认不响应 thread
+  interactions: true                        # 支持 slash command / button / select
+
+  # 若开 guild_channels: true，必须加服务器和频道白名单
+  allowed_guilds: []
+  # - guild_id: "987654321098765432"
+  #   guild_name: "MyTeam Workspace"
+  #   allowed_channel_ids:
+  #     - "123456789012345678"               # #hermes-channel
+  #   default_response_thread: false
+
+# ---------- 消息处理 ----------
+message_handling:
+  trigger_mode: "mention_or_dm"              # mention_or_dm / direct_message_only / slash_command_only
+  ignore_bot_mentions_from_others: true     # 别人 mention 其他 Bot 时 Hermes 不响应
+  ignore_replies_to_bots: true              # 不响应"对其他 Bot 的回复"
+  max_message_length: 2000
+  use_embeds_for_long_responses: true
+
+# ---------- 身份解析 ----------
+identity:
+  # Discord 私聊与服务器频道的同一 user_id 是同一身份，但跨服务器（guild）权限独立
+  guild_scoped_permissions: true
+
+# ---------- Bot-to-Bot ----------
+allow_bot_to_bot: false
+allowed_bot_ids: []
+
+# ---------- 回执策略 ----------
+response:
+  delivery_mode: "reply"                     # reply / new_message / thread
+  format: "markdown"
+  use_code_blocks_for_code: true
+  split_long_responses: true
+  max_response_length: 2000
+
+# ---------- Slash Commands ----------
+slash_commands:
+  # 默认只注册 L0/L1 命令
+  auto_register_on_startup: true
+  registered_commands:                       # 必须在 command-allowlist.md 里登记
+    - /status
+    - /inbox
+    - /help
+    - /draft
+    - /task
+
+# ---------- 速率限制 ----------
+rate_limit:
+  per_user_per_minute: 5
+  global_per_minute: 30
+  on_exceed: "silent_drop"
+
+# ---------- 日志 ----------
+audit:
+  store_all_incoming: true
+  store_path: "~/.hermes/sessions/discord"
+  redact_in_index:
+    - "phone"
+    - "email"
+    - "token_pattern"
+
+# ---------- 应急 ----------
+emergency:
+  pause_keyword: ""                          # 留空；暂停走 CLI

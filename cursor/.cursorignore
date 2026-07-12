@@ -1,0 +1,39 @@
+# Cursor ignore template
+# Copy to project root and adjust for your stack.
+
+# dependencies
+node_modules/
+.pnpm-store/
+.yarn/
+vendor/
+
+# build outputs
+dist/
+build/
+.next/
+out/
+coverage/
+storybook-static/
+
+# logs and temp files
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+credentials.json
+secrets.json
+
+# generated artifacts
+*.tsbuildinfo
+*.lockb
+package-lock.json.tmp
+

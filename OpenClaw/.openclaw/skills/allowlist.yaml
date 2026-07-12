@@ -1,0 +1,136 @@
+# Skill 白名单
+# 任何不在此处的 Skill，OpenClaw 必须 block_and_ask，等待用户和 lighthouse 联合放行
+# 字段说明：
+#   name:        Skill 唯一标识
+#   source:      来源（builtin / clawhub / local / git）
+#   version:     版本锁定，避免 ClawHub 上同名包被换掉
+#   permissions: 这个 Skill 拥有的能力清单
+#   network:     是否允许外网；为 true 时必须列出 allowed_domains
+#   audited_by:  最近一次审过的人格（通常是 lighthouse）
+#   audited_at:  审核日期（YYYY-MM-DD）
+#   notes:       为什么允许它进入白名单
+
+policy:
+  default: "block_and_ask"
+  trust_chain:
+    - builtin                   # OpenClaw 官方内置
+    - signed_clawhub_verified   # ClawHub 上有签名且验证通过
+    - signed_internal           # 公司/团队内部签名
+    - local_reviewed            # 本地代码且通过审查
+  audit_required_for:
+    - "clawhub_*"
+    - "git_*"
+    - "local_*"
+
+# ---------- 内置 / 低风险 Skill ----------
+skills:
+
+  - name: read_file
+    source: builtin
+    version: ">=1.0.0"
+    permissions:
+      - filesystem.read
+    network: false
+    audited_by: lighthouse
+    audited_at: "2026-05-19"
+    notes: "只读文件，零外部副作用，默认放行。"
+
+  - name: grep_in_repo
+    source: builtin
+    version: ">=1.0.0"
+    permissions:
+      - filesystem.read
+    network: false
+    audited_by: lighthouse
+    audited_at: "2026-05-19"
+    notes: "仓库搜索，建议默认放行。"
+
+  - name: run_tests
+    source: builtin
+    version: ">=1.0.0"
+    permissions:
+      - shell.run
+      - filesystem.read
+    network: false
+    audited_by: lighthouse
+    audited_at: "2026-05-19"
+    notes: "只在当前仓库目录内运行测试脚本。"
+
+  - name: git_local
+    source: builtin
+    version: ">=1.0.0"
+    permissions:
+      - shell.run
+      - filesystem.read
+      - filesystem.write
+    network: false
+    audited_by: lighthouse
+    audited_at: "2026-05-19"
+    notes: "本地 git 操作，禁止 push / fetch / pull 远程；远程操作需另一个 Skill。"
+
+  - name: write_to_outputs
+    source: builtin
+    version: ">=1.0.0"
+    permissions:
+      - filesystem.write
+    network: false
+    write_paths:
+      - "~/.openclaw/outputs"
+      - "~/.openclaw/tasks"
+      - "~/.openclaw/memory"
+    audited_by: lighthouse
+    audited_at: "2026-05-19"
+    notes: "限定写入目录，避免 Skill 改到无关路径。"
+
+# ---------- 中风险 Skill（需用户每次确认）----------
+
+  - name: web_fetch_readonly
+    source: builtin
+    version: ">=1.0.0"
+    permissions:
+      - network.outbound
+    network: true
+    allowed_domains:
+      - "docs.python.org"
+      - "developer.mozilla.org"
+      - "*.github.com"
+    require_user_confirm: true
+    audited_by: lighthouse
+    audited_at: "2026-05-19"
+    notes: "只允许查阅公开技术文档；禁止访问任何登录后内容。"
+
+# ---------- 高风险 Skill（默认关闭，使用时显式开启）----------
+
+# 下面几条留作模板，默认注释掉，需要用户解锁
+# - name: git_push_remote
+#   source: builtin
+#   version: ">=1.0.0"
+#   permissions: [network.outbound, shell.run]
+#   network: true
+#   allowed_domains: ["github.com", "gitlab.com"]
+#   require_user_confirm: true
+#   require_persona: lighthouse
+#   irreversible: true
+#   notes: "上传代码到远端，每次必须 lighthouse 审过 + 用户当场确认。"
+
+# - name: send_email
+#   source: builtin
+#   version: ">=1.0.0"
+#   permissions: [network.outbound]
+#   network: true
+#   require_user_confirm: true
+#   require_persona: lighthouse
+#   irreversible: true
+#   notes: "发送外部邮件，绝不能由 Heartbeat 触发。"
+
+# ---------- 黑名单（无论如何不允许）----------
+denylist:
+  - name: "*"
+    source: "clawhub_unverified"
+    reason: "ClawHub 未签名 Skill 一律拒绝"
+  - name: "*remote_shell*"
+    reason: "远程 shell 类 Skill 不进白名单"
+  - name: "*credential_dumper*"
+    reason: "凭据导出类 Skill 一律拒绝"
+  - name: "*keylogger*"
+    reason: "键盘记录类 Skill 一律拒绝"

@@ -1,0 +1,134 @@
+# Hermes Profile - ops
+# 路径：~/.hermes/profiles/ops/config.yaml
+# 用途：运维场景。监控、告警响应、批量操作；默认 SOUL 是 argus（严守安全）
+# 启用：hermes profile use ops
+
+profile:
+  name: "ops"
+  description: "运维场景：监控、告警响应、批量服务器操作、Cron 调度密集"
+  language: "zh-CN"
+  timezone: "Asia/Shanghai"
+
+# ---------- 模型 ----------
+model:
+  provider: custom
+  base_url: "https://openrouter.ai/api/v1"
+  api_key_env: "OPENROUTER_API_KEY"
+  model_name: "anthropic/claude-3.5-sonnet"
+  max_tokens: 8192
+  temperature: 0.2                          # 运维场景必须稳，温度最低
+
+# ---------- 默认 SOUL ----------
+soul:
+  default: "argus"                          # 运维默认人格是 argus —— 永远先审查
+  default_file: "~/.hermes/shared/souls/argus.md"
+  fallback: "hermes"
+  available:
+    - hermes
+    - sphinx
+    - daedalus
+    - argus
+    - iris
+    - atlas
+
+# ---------- 终端 ----------
+terminal:
+  backend: local
+  cwd: "."
+  timeout: 300                              # 运维命令可能较慢
+  shell_snapshot: false                     # ops 场景需要每次明确状态，不用快照
+
+# ---------- 沙箱与安全 ----------
+sandbox:
+  <<: *sandbox_strict                       # 运维必须最严，默认禁外网
+
+  # 但 ops profile 通常需要访问内部基础设施，覆写允许的域名
+  network:
+    allow_outbound: true
+    allowed_domains:
+      # 示例：填你的内部域名
+      # - "*.internal.example.com"
+      # - "monitoring.example.com"
+      # - "prometheus.example.com"
+      []
+  filesystem:
+    write_paths:
+      - "~/.hermes/outputs"
+      - "~/.hermes/tasks"
+      - "/var/log/hermes-ops"               # 运维场景的日志输出目录（用户需创建）
+    forbidden_paths:
+      - "~/.ssh"
+      - "~/.aws"
+      - "~/.config/gcloud"
+      - "~/.hermes/.env"
+      - "~/.hermes/auth.json"
+      - "/etc"                              # 系统配置目录禁写
+      - "/usr"
+
+# ---------- Skill 治理 ----------
+skills:
+  <<: *skills_default
+  # 运维场景额外收紧：自创 Skill 永远不自动启用
+  on_unknown: "block_and_ask"
+  quarantine:
+    enabled: true
+    dir: "~/.hermes/skills/.quarantine"
+    max_age_days: 14                         # ops 场景隔离期更短（14 天，比默认 30 天严）
+
+# ---------- 安全护栏 ----------
+guards:
+  <<: *guards_default
+  # ops 场景特别强约束
+  block_external_action_without_consent: true
+  require_dual_confirm_for_irreversible: true
+
+# ---------- 记忆 ----------
+memory:
+  <<: *memory_shared
+
+# ---------- 输出 ----------
+output:
+  <<: *output_default
+  style: "evidence_first"                   # ops 场景：先证据后结论
+  redact_in_logs:
+    - "email"
+    - "phone"
+    - "api_key"
+    - "absolute_user_path"
+    - "machine_name"
+    - "ip_address"                          # ops 额外脱敏 IP
+    - "hostname"
+
+# ---------- Cron ----------
+cron:
+  <<: *cron_default
+  enabled_tasks:
+    - daily-digest
+    - weekly-skill-audit                    # ops 必启用 Skill 审计
+
+# ---------- Gateway ----------
+gateway:
+  enabled: true                             # ops 通常接告警
+  identity_allowlist: "~/.hermes/gateway/identity-allowlist.yaml"
+  command_allowlist: "~/.hermes/gateway/command-allowlist.md"
+  default_response_platform: "slack"        # 假设运维主要在 Slack
+  allow_bot_to_bot: false                   # 告警 Bot 触发由用户人工审查转发，不自动响应
+
+# ---------- MCP ----------
+mcp_servers:
+  # 运维场景推荐的 MCP server 示例（默认不连，需 hermes mcp add 后启用）
+  # prometheus_query:
+  #   command: ./mcp-servers/prometheus
+  #   args: ["--url", "https://prometheus.internal"]
+  # grafana_query:
+  #   command: ./mcp-servers/grafana
+  #   args: []
+
+# ---------- Agent Team ----------
+team:
+  enabled: true
+  max_concurrent_souls: 2
+  coordinator: "hermes"
+  reporting_channel: "~/.hermes/tasks/daily-log.md"
+  # ops 场景的协作模式：argus 一直在场，其他 SOUL 临时切换
+  always_present: ["argus"]

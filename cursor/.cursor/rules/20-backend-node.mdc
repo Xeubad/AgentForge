@@ -1,0 +1,67 @@
+---
+description: Node.js、API、数据库和服务端安全规则
+globs:
+  - "**/server/**/*.ts"
+  - "**/server/**/*.js"
+  - "**/backend/**/*.ts"
+  - "**/backend/**/*.js"
+  - "**/api/**/*.ts"
+  - "**/api/**/*.js"
+  - "**/services/**/*.ts"
+  - "**/services/**/*.js"
+  - "**/routes/**/*.ts"
+  - "**/routes/**/*.js"
+  - "**/controllers/**/*.ts"
+  - "**/controllers/**/*.js"
+  - "**/repositories/**/*.ts"
+  - "**/repositories/**/*.js"
+  - "**/models/**/*.ts"
+  - "**/models/**/*.js"
+  - "**/prisma/**/*.ts"
+  - "**/prisma/**/*.js"
+  - "**/*.route.ts"
+  - "**/*.route.js"
+  - "**/*.controller.ts"
+  - "**/*.controller.js"
+  - "**/*.service.ts"
+  - "**/*.service.js"
+  - "**/*.repository.ts"
+  - "**/*.repository.js"
+  - "**/*.model.ts"
+  - "**/*.model.js"
+  - "**/schema.prisma"
+alwaysApply: false
+---
+
+# 后端开发规则
+
+## 架构边界
+
+- 保持既有分层；常见边界为 route/controller 处理协议，service 处理业务，repository/model 处理数据访问。
+- Controller 不写复杂业务逻辑，Repository 不写业务决策。
+- 新增接口前先搜索是否已有相近 endpoint、service、schema 或权限中间件。
+
+## 输入输出
+
+- 所有用户输入必须经过 schema 校验，优先复用项目已有 Zod/Joi/validator 方案。
+- API 响应格式必须遵循项目现有约定；没有约定时再提出统一格式建议。
+- 错误返回不能泄露密码、token、SQL、堆栈和内部路径。
+
+## 数据与安全
+
+- 数据库访问使用 ORM、Query Builder 或参数化查询，禁止拼接 SQL。
+- 密码必须使用成熟哈希方案；token、密钥和连接串只能来自环境变量或密钥管理。
+- 日志必须包含足够上下文，但不得记录敏感数据。
+- 涉及鉴权、授权、支付、数据删除、导出和批量修改时，必须显式说明风险和验证方式。
+
+## 异步与错误处理
+
+- 优先使用 `async/await`，保持异常传播路径清晰。
+- 不允许空 `catch`；如果故意忽略错误，必须说明原因并限制影响范围。
+- 后台任务、队列、定时任务必须考虑重试、幂等和失败可观测性。
+
+## 验证
+
+- 新增或修改核心业务逻辑时，同步新增或更新测试。
+- 至少覆盖正常路径和一个关键异常路径。
+- 能运行数据库迁移检查、类型检查、单元测试或集成测试时必须运行。

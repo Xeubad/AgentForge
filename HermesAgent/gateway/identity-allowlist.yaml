@@ -1,0 +1,91 @@
+# Gateway 身份白名单
+# 路径：~/.hermes/gateway/identity-allowlist.yaml
+# 作用：定义哪些用户能跟 Hermes 通过 Gateway 沟通
+# 强约束：不在此列表的发送方一律 silent_block，消息存 inbox 但不响应
+
+# ============================================================================
+# 角色权限速查
+# ============================================================================
+# owner        : 全部，但仍需在 CLI 双重确认才能做不可逆动作
+# admin        : 同 owner，但不能改 guards / 本文件 / command-allowlist
+# collaborator : 可触发只读命令；可发起需 owner 在 CLI 确认的请求
+# readonly     : 仅查询状态；不能触发任何命令
+# ============================================================================
+
+identities:
+
+  # ----- 示例：主用户（多平台同人）-----
+  # 注意：同一真人在不同平台也是独立 identity，权限分别计算
+
+  - platform: telegram
+    user_id: "REPLACE_WITH_TELEGRAM_USER_ID"
+    display_name: "Owner (Telegram)"
+    role: owner
+    profiles_accessible: ["*"]                # 可使用所有 profile
+    real_name: ""                              # 留空不影响功能；填写后会被记入 USER.md（注意脱敏）
+    notes: "主账号 Telegram 入口；启用双因素认证"
+    activated_at: ""                           # 由用户填写或工具自动记录
+    last_used_at: ""                           # 工具自动维护
+
+  - platform: slack
+    user_id: "REPLACE_WITH_SLACK_USER_ID"     # 形如 U01ABCDEFG
+    display_name: "Owner (Slack)"
+    role: owner
+    profiles_accessible: ["*"]
+    notes: "主账号 Slack 入口"
+
+  # ----- 示例：协作者 -----
+
+  # - platform: slack
+  #   user_id: "U01XYZ"
+  #   display_name: "Bob (DevOps)"
+  #   role: collaborator
+  #   profiles_accessible: ["ops"]            # 仅限 ops profile
+  #   notes: "运维同事；只能在 ops 场景触发，仅可发起请求，owner 在 CLI 确认才执行"
+
+  # ----- 示例：只读身份 -----
+
+  # - platform: discord
+  #   user_id: "987654321"
+  #   display_name: "Status Watcher"
+  #   role: readonly
+  #   profiles_accessible: ["ops"]
+  #   notes: "只允许查询状态，不能触发任何命令"
+
+# ============================================================================
+# Bot 白名单（极不推荐启用）
+# ============================================================================
+# 若需启用 Bot-to-Bot，在此列出可信 Bot ID
+allowed_bots:
+  # - platform: slack
+  #   bot_id: "B01ABCDEFG"
+  #   bot_name: "alertmanager"
+  #   notes: "告警 Bot 推送 — 仅作为信息接收，不允许触发执行"
+  #   restrictions:
+  #     - "messages_become_l0_only"          # Bot 消息一律降级为 L0（只读）
+  #     - "no_irreversible_action"
+  []
+
+# ============================================================================
+# 跨平台身份合并（默认不开启）
+# ============================================================================
+# 如果你明确想让某真人在多平台被识别为"同一人"（共享 MEMORY），在这里登记
+# 默认完全禁用 — 跨平台串身份是攻击放大器
+cross_platform_identity_links: []
+  # 示例（默认禁用）：
+  # - real_person: "alice"                   # 内部标识符
+  #   linked_identities:
+  #     - platform: telegram
+  #       user_id: "12345"
+  #     - platform: slack
+  #       user_id: "U01ABC"
+  #   shared_memory: false                   # 即使链接也不推荐共享 memory
+  #   reason: "Alice 在多平台都需要查询同样的项目状态"
+
+# ============================================================================
+# 维护说明
+# ============================================================================
+# 1. 添加 identity 必须由 owner 在 CLI 主控对话执行
+# 2. 修改 role 必须重启 Gateway 才生效（防止运行时权限提升）
+# 3. 撤销 identity 用 `hermes gateway revoke <platform> <user_id>`
+# 4. 每月 Argus 在周复盘时检查"60 天未使用"的 identity，建议清理
