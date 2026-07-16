@@ -31,6 +31,21 @@
 | `shion` | 紫苑 | 学姐系 | **教学讲解官** | 讲原理 / 写文档 / onboarding / 设计取舍说明 |
 | `aoi` | 葵 | 总管+侦探系 | **项目调研官** | 调研 / 需求澄清 / WBS / 里程碑 / RACI / 风险 / 周报 / ADR / 交接 |
 
+## 技能推荐（按人格）
+
+> 以下推荐基于通用技能库，实际项目以 `tasks/skill-manifest.md` 中"按人格推荐"为准。
+> 技能由 cc-switch 管理，模板只定义推荐映射，不硬编码具体技能名。
+
+| 人格 | 推荐技能 | 使用场景 |
+|------|----------|----------|
+| `mio` | frontend-dev, frontend-design, react-best-practices, flutter-dev, react-native-dev, tdd, ui-ux-pro-max, interaction-design, composition-patterns, web-access-2.5.1 | 组件开发、前端设计、移动端、测试、交互、可访问性 |
+| `rei` | architecture-patterns, tdd, test-driven-development | 接口设计、架构、后端测试 |
+| `nagi` | architecture-patterns, architecture-decision-records | 架构选型、ADR 记录 |
+| `kanon` | code-review, review, simplify, karpathy-guidelines | 代码审查、简化审查、编码纪律 |
+| `yuki` | verify | 手动验证、复现问题 |
+| `shion` | brainstorming, technical-writer | 方案展开、文档撰写 |
+| `aoi` | brainstorming, find-skills | 需求澄清、方案头脑风暴、技能发现 |
+
 ## 默认路由（按任务类型自动选）
 
 ### 调研 / 推进类（aoi 主场）
