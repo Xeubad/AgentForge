@@ -119,7 +119,13 @@ cp    "<本仓库路径>/Claude Code/PROJECT_STRUCTURE.md" PROJECT_STRUCTURE.md
 ```
 
 第三条命令会让你选 preset（**推荐选 Full** —— 完整 HUD 显示）+ 标签语言（中文 / 英文）。
-确认后它会自动检测平台/Node/Bun/终端列数，写入 `~/.claude/settings.json`，无需手动维护版本号——插件升级时 statusLine 命令会自动指向新版本。
+确认后它会自动检测平台/Node/Bun/终端列数，写入 `~/.claude/settings.json` 的 `statusLine` 字段，无需手动维护版本号——插件升级时 statusLine 命令会自动指向新版本。
+
+> **⚠️ 迁移：把 statusLine 从 settings.json 搬到 settings.local.json**
+>
+> `claude-hud:setup` 会把 `statusLine` 写入 `settings.json`，但 `cc switch` 会重写这个文件导致配置丢失。
+> **必须手动迁移**：把 `settings.json` 里的 `statusLine` 整个块删除，复制到 `settings.local.json` 里。
+> `settings.local.json` 不会被 `cc switch` 清理，且 Claude Code 会自动合并两个文件的配置。
 
 > **⚠️ 重要：`settings.local.json` 防覆盖机制**
 >
@@ -140,6 +146,8 @@ cp    "<本仓库路径>/Claude Code/PROJECT_STRUCTURE.md" PROJECT_STRUCTURE.md
 >   }
 > }
 > ```
+>
+> **同时把 `settings.json` 里的 `statusLine` 块删除**，避免两份并存导致 HUD 不显示。
 
 ---
 
@@ -211,7 +219,13 @@ cp    "<本仓库路径>/Claude Code/PROJECT_STRUCTURE.md" PROJECT_STRUCTURE.md
 ```
 
 第三条命令会让你选 preset（**推荐选 Full** —— 完整 HUD 显示）+ 标签语言（中文 / 英文）。
-确认后它会自动检测平台/Node/Bun/终端列数，写入 `~/.claude/settings.json`，无需手动维护版本号——插件升级时 statusLine 命令会自动指向新版本。
+确认后它会自动检测平台/Node/Bun/终端列数，写入 `~/.claude/settings.json` 的 `statusLine` 字段，无需手动维护版本号——插件升级时 statusLine 命令会自动指向新版本。
+
+> **⚠️ 迁移：把 statusLine 从 settings.json 搬到 settings.local.json**
+>
+> `claude-hud:setup` 会把 `statusLine` 写入 `settings.json`，但 `cc switch` 会重写这个文件导致配置丢失。
+> **必须手动迁移**：把 `settings.json` 里的 `statusLine` 整个块删除，复制到 `settings.local.json` 里。
+> `settings.local.json` 不会被 `cc switch` 清理，且 Claude Code 会自动合并两个文件的配置。
 
 > **⚠️ 重要：`settings.local.json` 防覆盖机制**
 >
@@ -232,6 +246,8 @@ cp    "<本仓库路径>/Claude Code/PROJECT_STRUCTURE.md" PROJECT_STRUCTURE.md
 >   }
 > }
 > ```
+>
+> **同时把 `settings.json` 里的 `statusLine` 块删除**，避免两份并存导致 HUD 不显示。
 
 ---
 
@@ -301,7 +317,7 @@ chmod +x ~/.claude/hooks/*.sh
 
 | 症状 | 原因 | 解决 |
 |---|---|---|
-| HUD 没出现，状态栏空白 | settings.json 没写入 statusLine 字段 | 重跑 `/claude-hud:setup`；或检查 `~/.claude/settings.json` 是否包含 `"statusLine"` 顶层字段 |
+| HUD 没出现，状态栏空白 | statusLine 放错文件了 | 检查 `~/.claude/settings.json` 不应有 `statusLine`；`statusLine` 应该在 `settings.local.json` 里。如果 setup 写到了 settings.json，手动删除并迁到 settings.local.json（见上方迁移步骤） |
 | 安装报 `EXDEV: cross-device link not permitted` | Linux 上 `/tmp` 与家目录在不同文件系统 | `mkdir -p ~/.cache/tmp && TMPDIR=~/.cache/tmp claude`，然后在新 session 里重跑 install |
 | Windows 装完不显示 | 误用了 Bun 走 statusLine | Windows 必须用 Node，不要选 Bun；重跑 setup 时拒绝 Bun |
 | HUD 显示了但 hooks 失效 | setup 命令是否覆盖了我们的 hooks/agent 字段 | 检查 `~/.claude/settings.json`：`statusLine` / `hooks` / `agent` 三个字段应该**共存**。若只剩 statusLine → setup 写入时 settings.json 是非法 JSON 被覆盖了，恢复后再跑 setup |
