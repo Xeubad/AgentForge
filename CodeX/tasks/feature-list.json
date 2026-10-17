@@ -41,6 +41,25 @@
         "Python tomllib/json validation passed after README creation."
       ],
       "notes": "README is human-facing; active Codex behavior remains in AGENTS.md and .codex/."
+    },
+    {
+      "id": "pi-agent-optimization-plan",
+      "priority": 1,
+      "area": "pi-agent-docs",
+      "title": "Create a Nico Bailon-informed Pi Agent template",
+      "user_visible_behavior": "The workspace includes a standalone PiAgent folder with reusable Pi Agent rules, settings placeholders, subagent role prompts, task templates, handoff notes, and memory templates.",
+      "status": "passing",
+      "verification": [
+        "Confirm PiAgent is a standalone root-level folder rather than a nested CodeX document.",
+        "Confirm the template includes AGENTS.md, settings and MCP examples, five role prompts, task and handoff templates, and three memory templates.",
+        "Confirm README explains copying the template and points to nicobailon repositories for optional extensions."
+      ],
+      "evidence": [
+        "Scanned nicobailon repository pages 1-5 and identified the 131-public-repository profile inventory.",
+        "Read core README content for pi-subagents, pi-mcp-adapter, pi-intercom, pi-web-access, visual-explainer, pi-coordination, pi-autoresearch, pi-powerline-footer, and pi-tool-display.",
+        "Created PiAgent/ as a reusable template with operational rules, role prompts, configuration placeholders, task handoff, and memory files."
+      ],
+      "notes": "The settings and MCP files are templates; verify exact keys and paths against the installed Pi version and selected extension READMEs."
     }
   ]
 }

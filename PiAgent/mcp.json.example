@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "SERVER_NAME": {
+      "command": "COMMAND",
+      "args": [],
+      "env": {
+        "API_KEY": "SET_IN_SECRET_STORE"
+      },
+      "disabled": true
+    }
+  }
+}

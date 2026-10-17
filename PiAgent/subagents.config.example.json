@@ -1,0 +1,34 @@
+{
+  "toolDescriptionMode": "compact",
+  "inlineToolDisplay": "summary",
+  "asyncByDefault": true,
+  "defaultSubagentContext": "fresh",
+  "fleetView": true,
+  "fleetViewPlacement": "belowEditor",
+  "maxSubagentSpawnsPerSession": 50,
+  "maxSubagentSpawnsPerRun": 12,
+  "maxActiveAsyncRunsPerSession": 3,
+  "parallel": {
+    "maxTasks": 8,
+    "concurrency": 3
+  },
+  "maxSubagentDepth": 1,
+  "scheduledRuns": {
+    "enabled": false,
+    "maxPending": 20
+  },
+  "missions": {
+    "enabled": true,
+    "globalIndex": true,
+    "retainTerminal": 100
+  },
+  "authorityPolicy": {
+    "discardWorktree": "confirm",
+    "destructiveCleanup": "confirm",
+    "spawnBudgetGrant": "confirm",
+    "scheduleCreate": "confirm",
+    "stopRun": "auto",
+    "steerRun": "auto"
+  },
+  "artifactDir": "session"
+}
